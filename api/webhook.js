@@ -1,4 +1,5 @@
-import { Client, middleware } from '@line/bot-sdk';
+import { Client } from '@line/bot-sdk';
+import OpenAI from 'openai';
 
 const config = {
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
@@ -6,6 +7,10 @@ const config = {
 };
 
 const client = new Client(config);
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,13 +20,17 @@ export default async function handler(req, res) {
   try {
     const events = req.body.events;
 
-    // 複数イベントをループ（基本は1件）
     for (const event of events) {
       if (event.type === 'message' && event.message.type === 'text') {
         const userMessage = event.message.text;
 
-        // ChatGPTへ問い合わせ（ダミー応答にしておく）
-        const replyText = `あなたのメッセージ: ${userMessage}`;
+        // ChatGPTに投げる！
+        const chatResponse = await openai.chat.completions.create({
+          model: 'gpt-3.5-turbo',
+          messages: [{ role: 'user', content: userMessage }],
+        });
+
+        const replyText = chatResponse.choices[0].message.content;
 
         await client.replyMessage(event.replyToken, {
           type: 'text',
